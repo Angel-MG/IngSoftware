@@ -1,35 +1,36 @@
-import './style.css';
+import "./style.css";
 
 // Vistas
-import { renderizarFormularioInicioSesion } from './vistas/inicioSesionVista.js';
-import { renderizarVistaVentas } from './vistas/ventasVista.js';
-import { renderizarVistaProduccion } from './vistas/produccionVista.js';
-import { renderizarVistaDecoracion } from './vistas/decoracionVista.js';
-import { renderizarVistaAdmin } from './vistas/adminVista.js';
+import { renderizarFormularioInicioSesion } from "./vistas/inicioSesionVista.js";
+import { renderizarVistaVentas } from "./vistas/ventasVista.js";
+import { renderizarVistaProduccion } from "./vistas/produccionVista.js";
+import { renderizarVistaDecoracion } from "./vistas/decoracionVista.js";
+import { renderizarVistaAdmin } from "./vistas/adminVista.js";
 
 // Manejadores
-import { configurarManejadoresInicioSesion } from './handlers/authHandlers.js';
-import { configurarManejadoresNavegacion } from './handlers/navigationHandlers.js';
-import { configurarManejadoresVentas } from './handlers/orderHandlers.js';
-import { configurarManejadoresProduccion } from './handlers/productionHandlers.js';
-import { configurarManejadoresDecoracion } from './handlers/decorationHandlers.js';
-import { configurarManejadoresAdmin } from './handlers/adminHandlers.js';
+import { configurarManejadoresInicioSesion } from "./handlers/authHandlers.js";
+import { configurarManejadoresNavegacion } from "./handlers/navigationHandlers.js";
+import { configurarManejadoresVentas } from "./handlers/orderHandlers.js";
+import { configurarManejadoresProduccion } from "./handlers/productionHandlers.js";
+import { configurarManejadoresDecoracion } from "./handlers/decorationHandlers.js";
+import { configurarManejadoresAdmin } from "./handlers/adminHandlers.js";
 
 // Controladores
-import { ControladorPedido } from './controladores/pedidoControlador.js';
-import { ControladorProducto } from './controladores/productoControlador.js';
-import { ControladorUsuario } from './controladores/usuarioControlador.js';
+import { ControladorPedido } from "./controladores/pedidoControlador.js";
+import { ControladorProducto } from "./controladores/productoControlador.js";
+import { ControladorUsuario } from "./controladores/usuarioControlador.js";
+import { ControladorAutenticacion } from "./controladores/autenticacionControlador.js";
 
 // Firebase
-import { db } from './config/firebase.js';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { db } from "./config/firebase.js";
+import { collection, onSnapshot, query } from "firebase/firestore";
 
 // Inicializadores
-import { inicializarVistaVentas } from './inicializadores/inicializadorVentas.js';
+import { inicializarVistaVentas } from "./inicializadores/inicializadorVentas.js";
 
 // Estado global de la aplicación
 let usuarioActual = null;
-let vistaActual = 'login';
+let vistaActual = "login";
 let unsubscribePedidos = null;
 
 // Función para configurar escucha en tiempo real
@@ -38,9 +39,9 @@ function configurarEscuchaPedidos() {
     unsubscribePedidos();
   }
 
-  const pedidosQuery = query(collection(db, 'pedidos'));
+  const pedidosQuery = query(collection(db, "pedidos"));
   unsubscribePedidos = onSnapshot(pedidosQuery, (snapshot) => {
-    if (usuarioActual && vistaActual !== 'login') {
+    if (usuarioActual && vistaActual !== "login") {
       renderizarVistaActual();
     }
   });
@@ -49,8 +50,8 @@ function configurarEscuchaPedidos() {
 // Función principal de inicialización
 async function inicializarApp() {
   try {
-    const app = document.querySelector('#app');
-    
+    const app = document.querySelector("#app");
+
     if (!usuarioActual) {
       if (unsubscribePedidos) {
         unsubscribePedidos();
@@ -63,7 +64,7 @@ async function inicializarApp() {
           vistaActual = usuario.obtenerVistaDefecto();
           configurarEscuchaPedidos();
           inicializarApp();
-        }
+        },
       });
     } else {
       await renderizarVistaActual();
@@ -72,20 +73,32 @@ async function inicializarApp() {
           vistaActual = nuevaVista;
           renderizarVistaActual();
         },
-        onLogout: () => {
-          if (unsubscribePedidos) {
-            unsubscribePedidos();
-            unsubscribePedidos = null;
+        onLogout: async () => {
+          try {
+            const resultado = await ControladorAutenticacion.cerrarSesion(
+              usuarioActual.id,
+            );
+            if (resultado.exito) {
+              if (unsubscribePedidos) {
+                unsubscribePedidos();
+                unsubscribePedidos = null;
+              }
+              usuarioActual = null;
+              vistaActual = "login";
+              inicializarApp();
+            } else {
+              alert("Error al cerrar sesión: " + resultado.mensaje);
+            }
+          } catch (error) {
+            console.error("Error al cerrar sesión:", error);
+            alert("Error al cerrar sesión");
           }
-          usuarioActual = null;
-          vistaActual = 'login';
-          inicializarApp();
-        }
+        },
       });
     }
   } catch (error) {
-    console.error('Error al inicializar la aplicación:', error);
-    document.querySelector('#app').innerHTML = `
+    console.error("Error al inicializar la aplicación:", error);
+    document.querySelector("#app").innerHTML = `
       <div class="error-container">
         <h2>Error de Inicialización</h2>
         <p>Ha ocurrido un error al inicializar la aplicación. Por favor, intente nuevamente.</p>
@@ -96,8 +109,8 @@ async function inicializarApp() {
 }
 
 async function renderizarVistaActual() {
-  const app = document.querySelector('#app');
-  
+  const app = document.querySelector("#app");
+
   if (!usuarioActual.puedeAccederVista(vistaActual)) {
     vistaActual = usuarioActual.obtenerVistaDefecto();
   }
@@ -105,33 +118,41 @@ async function renderizarVistaActual() {
   const callbacks = {
     onStatusUpdate: () => renderizarVistaActual(),
     onEdit: () => renderizarVistaActual(),
-    onDelete: () => renderizarVistaActual()
+    onDelete: () => renderizarVistaActual(),
   };
 
   try {
-    switch(vistaActual) {
-      case 'admin':
+    switch (vistaActual) {
+      case "admin":
         const usuarios = await ControladorUsuario.obtenerTodos();
-        const productosAdmin = await ControladorProducto.obtenerTodosProductos();
-        app.innerHTML = renderizarVistaAdmin(usuarios.datos, productosAdmin.datos);
+        const productosAdmin =
+          await ControladorProducto.obtenerTodosProductos();
+        app.innerHTML = renderizarVistaAdmin(
+          usuarios.datos,
+          productosAdmin.datos,
+        );
         configurarManejadoresAdmin(callbacks);
         break;
 
-      case 'ventas':
+      case "ventas":
         const pedidos = await ControladorPedido.obtenerTodosPedidos();
         app.innerHTML = renderizarVistaVentas(pedidos.datos);
         configurarManejadoresVentas(callbacks);
         inicializarVistaVentas(pedidos.datos, callbacks);
         break;
 
-      case 'produccion':
+      case "produccion":
         const pedidosProduccion = await ControladorPedido.obtenerTodosPedidos();
-        const productosProduccion = await ControladorProducto.obtenerTodosProductos();
-        app.innerHTML = renderizarVistaProduccion(pedidosProduccion.datos, productosProduccion.datos);
+        const productosProduccion =
+          await ControladorProducto.obtenerTodosProductos();
+        app.innerHTML = renderizarVistaProduccion(
+          pedidosProduccion.datos,
+          productosProduccion.datos,
+        );
         configurarManejadoresProduccion(callbacks);
         break;
 
-      case 'decoracion':
+      case "decoracion":
         const pedidosDecoracion = await ControladorPedido.obtenerTodosPedidos();
         app.innerHTML = renderizarVistaDecoracion(pedidosDecoracion.datos);
         configurarManejadoresDecoracion(callbacks);
@@ -145,11 +166,11 @@ async function renderizarVistaActual() {
             vistaActual = usuario.obtenerVistaDefecto();
             configurarEscuchaPedidos();
             inicializarApp();
-          }
+          },
         });
     }
   } catch (error) {
-    console.error('Error al renderizar la vista:', error);
+    console.error("Error al renderizar la vista:", error);
     app.innerHTML = `
       <div class="error-container">
         <h2>Error</h2>
@@ -162,3 +183,4 @@ async function renderizarVistaActual() {
 
 // Iniciar la aplicación
 inicializarApp();
+

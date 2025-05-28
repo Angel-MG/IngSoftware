@@ -1,14 +1,17 @@
-import { db } from '../config/firebase';
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc 
-} from 'firebase/firestore';
+import { db } from "../config/firebase";
+import {
+  collection,
+  doc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+} from "firebase/firestore";
 
-const COLECCION = 'usuarios';
+const COLECCION = "usuarios";
+const COLECCION_SESIONES = "sesiones";
 
 export class Usuario {
   constructor(datos) {
@@ -21,12 +24,15 @@ export class Usuario {
   static async obtenerTodos() {
     try {
       const querySnapshot = await getDocs(collection(db, COLECCION));
-      return querySnapshot.docs.map(doc => new Usuario({
-        id: doc.id,
-        ...doc.data()
-      }));
+      return querySnapshot.docs.map(
+        (doc) =>
+          new Usuario({
+            id: doc.id,
+            ...doc.data(),
+          }),
+      );
     } catch (error) {
-      console.error('Error al obtener usuarios:', error);
+      console.error("Error al obtener usuarios:", error);
       throw error;
     }
   }
@@ -36,10 +42,10 @@ export class Usuario {
       const docRef = await addDoc(collection(db, COLECCION), datosUsuario);
       return new Usuario({
         id: docRef.id,
-        ...datosUsuario
+        ...datosUsuario,
       });
     } catch (error) {
-      console.error('Error al crear usuario:', error);
+      console.error("Error al crear usuario:", error);
       throw error;
     }
   }
@@ -50,10 +56,10 @@ export class Usuario {
       await updateDoc(userRef, datosUsuario);
       return new Usuario({
         id,
-        ...datosUsuario
+        ...datosUsuario,
       });
     } catch (error) {
-      console.error('Error al actualizar usuario:', error);
+      console.error("Error al actualizar usuario:", error);
       throw error;
     }
   }
@@ -63,7 +69,7 @@ export class Usuario {
       await deleteDoc(doc(db, COLECCION, id));
       return true;
     } catch (error) {
-      console.error('Error al eliminar usuario:', error);
+      console.error("Error al eliminar usuario:", error);
       throw error;
     }
   }
@@ -71,27 +77,66 @@ export class Usuario {
   static async autenticar(nombreUsuario, contrasena) {
     try {
       const usuarios = await Usuario.obtenerTodos();
-      const usuario = usuarios.find(u => 
-        u.nombreUsuario === nombreUsuario && 
-        u.contrasena === contrasena
+      const usuario = usuarios.find(
+        (u) => u.nombreUsuario === nombreUsuario && u.contrasena === contrasena,
       );
-      
-      return usuario || null;
+
+      if (!usuario) {
+        return null;
+      }
+
+      // Verificar si ya existe una sesión activa
+      const sesionesRef = collection(db, COLECCION_SESIONES);
+      const q = query(sesionesRef, where("usuarioId", "==", usuario.id));
+      const sesionesSnapshot = await getDocs(q);
+
+      if (!sesionesSnapshot.empty) {
+        throw new Error("Este usuario ya tiene una sesión activa");
+      }
+
+      // Crear nueva sesión
+      await addDoc(collection(db, COLECCION_SESIONES), {
+        usuarioId: usuario.id,
+        fechaInicio: new Date().toISOString(),
+        activa: true,
+      });
+
+      return usuario;
     } catch (error) {
-      console.error('Error en autenticación:', error);
-      return null;
+      console.error("Error en autenticación:", error);
+      throw error;
+    }
+  }
+
+  static async cerrarSesion(usuarioId) {
+    try {
+      const sesionesRef = collection(db, COLECCION_SESIONES);
+      const q = query(sesionesRef, where("usuarioId", "==", usuarioId));
+      const sesionesSnapshot = await getDocs(q);
+
+      const promesasEliminacion = [];
+      sesionesSnapshot.forEach((doc) => {
+        promesasEliminacion.push(deleteDoc(doc.ref));
+      });
+
+      await Promise.all(promesasEliminacion);
+      return true;
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+      throw error;
     }
   }
 
   obtenerVistaDefecto() {
-    if (this.rol === 'admin') return 'admin';
+    if (this.rol === "admin") return "admin";
     return this.rol;
   }
 
   puedeAccederVista(vista) {
-    if (this.rol === 'admin') {
-      return vista === 'admin';
+    if (this.rol === "admin") {
+      return vista === "admin";
     }
     return this.obtenerVistaDefecto() === vista;
   }
 }
+

@@ -14,7 +14,15 @@ class ControladorAutenticacion {
       return { exito: false, mensaje: error.message };
     }
   }
+
+  static async cerrarSesion(usuarioId) {
+    try {
+      await Usuario.cerrarSesion(usuarioId);
+      return { exito: true };
+    } catch (error) {
+      return { exito: false, mensaje: error.message };
+    }
+  }
 }
 
 export { ControladorAutenticacion };
-

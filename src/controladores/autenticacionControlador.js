@@ -1,13 +1,15 @@
-import { Usuario } from '../modelos/Usuario.js';
+import { Usuario } from "../modelos/Usuario.js";
 
 class ControladorAutenticacion {
   static async iniciarSesion(nombreUsuario, contrasena) {
     try {
-      const usuario = await Usuario.autenticar(nombreUsuario, contrasena);
+      // Trim whitespace from username
+      const nombreUsuarioLimpio = nombreUsuario.trim();
+      const usuario = await Usuario.autenticar(nombreUsuarioLimpio, contrasena);
       if (usuario) {
         return { exito: true, usuario };
       }
-      return { exito: false, mensaje: 'Credenciales inválidas' };
+      return { exito: false, mensaje: "Credenciales inválidas" };
     } catch (error) {
       return { exito: false, mensaje: error.message };
     }
@@ -15,3 +17,4 @@ class ControladorAutenticacion {
 }
 
 export { ControladorAutenticacion };
+

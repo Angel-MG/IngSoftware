@@ -168,12 +168,56 @@ function configurarManejadoresProductos(callbacks) {
   const botonNuevoProducto = document.getElementById('newProductBtn');
   if (botonNuevoProducto) {
     botonNuevoProducto.addEventListener('click', () => {
-      const modalProducto = document.getElementById('productModal');
-      const formularioProducto = document.getElementById('productForm');
-      
-      // Reset form
-      formularioProducto.reset();
+      const modalProducto = document.createElement('div');
+      modalProducto.id = 'productModal';
+      modalProducto.className = 'modal';
       modalProducto.style.display = 'flex';
+      
+      modalProducto.innerHTML = `
+        <div class="modal-content">
+          <h3>Agregar Nuevo Producto</h3>
+          <form id="productForm">
+            <div class="form-group">
+              <label for="productName">Nombre del Producto:</label>
+              <input type="text" id="productName" required>
+            </div>
+            <div class="form-group">
+              <label for="productType">Tipo de Producto:</label>
+              <select id="productType" required>
+                <option value="ingrediente">Ingrediente</option>
+                <option value="terminado">Producto Terminado</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="productQuantity">Cantidad:</label>
+              <input type="number" id="productQuantity" min="0" required>
+            </div>
+            <div class="form-group">
+              <label for="productUnit">Unidad:</label>
+              <select id="productUnit" required>
+                <option value="pieza">Pieza</option>
+                <option value="kg">Kilogramo</option>
+                <option value="g">Gramo</option>
+                <option value="litro">Litro</option>
+                <option value="ml">Mililitro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="productPrice">Precio:</label>
+              <input type="number" id="productPrice" min="0" step="0.01" required>
+            </div>
+            <div class="form-actions">
+              <button type="submit">Guardar</button>
+              <button type="button" id="cancelProductBtn">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      document.body.appendChild(modalProducto);
+      
+      const formularioProducto = document.getElementById('productForm');
+      const botonCancelar = document.getElementById('cancelProductBtn');
 
       const handleSubmit = async (e) => {
         e.preventDefault();
@@ -188,7 +232,7 @@ function configurarManejadoresProductos(callbacks) {
         try {
           const resultado = await ControladorProducto.crearProducto(datosProducto);
           if (resultado.exito) {
-            modalProducto.style.display = 'none';
+            modalProducto.remove();
             formularioProducto.removeEventListener('submit', handleSubmit);
             if (callbacks.onStatusUpdate) {
               await callbacks.onStatusUpdate();
@@ -205,8 +249,8 @@ function configurarManejadoresProductos(callbacks) {
 
       formularioProducto.addEventListener('submit', handleSubmit);
 
-      document.getElementById('cancelProductBtn').addEventListener('click', () => {
-        modalProducto.style.display = 'none';
+      botonCancelar.addEventListener('click', () => {
+        modalProducto.remove();
         formularioProducto.removeEventListener('submit', handleSubmit);
       });
     });
@@ -221,16 +265,56 @@ function configurarManejadoresProductos(callbacks) {
         const producto = productos.datos.find(p => p.id === productId);
         
         if (producto) {
-          const modalProducto = document.getElementById('productModal');
-          const formularioProducto = document.getElementById('productForm');
-          
-          document.getElementById('productName').value = producto.nombre;
-          document.getElementById('productQuantity').value = producto.cantidad;
-          document.getElementById('productUnit').value = producto.unidad;
-          document.getElementById('productPrice').value = producto.precio;
-          document.getElementById('productType').value = producto.tipo;
-          
+          const modalProducto = document.createElement('div');
+          modalProducto.id = 'productModal';
+          modalProducto.className = 'modal';
           modalProducto.style.display = 'flex';
+          
+          modalProducto.innerHTML = `
+            <div class="modal-content">
+              <h3>Editar Producto</h3>
+              <form id="productForm">
+                <div class="form-group">
+                  <label for="productName">Nombre del Producto:</label>
+                  <input type="text" id="productName" value="${producto.nombre}" required>
+                </div>
+                <div class="form-group">
+                  <label for="productType">Tipo de Producto:</label>
+                  <select id="productType" required>
+                    <option value="ingrediente" ${producto.tipo === 'ingrediente' ? 'selected' : ''}>Ingrediente</option>
+                    <option value="terminado" ${producto.tipo === 'terminado' ? 'selected' : ''}>Producto Terminado</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="productQuantity">Cantidad:</label>
+                  <input type="number" id="productQuantity" value="${producto.cantidad}" min="0" required>
+                </div>
+                <div class="form-group">
+                  <label for="productUnit">Unidad:</label>
+                  <select id="productUnit" required>
+                    <option value="pieza" ${producto.unidad === 'pieza' ? 'selected' : ''}>Pieza</option>
+                    <option value="kg" ${producto.unidad === 'kg' ? 'selected' : ''}>Kilogramo</option>
+                    <option value="g" ${producto.unidad === 'g' ? 'selected' : ''}>Gramo</option>
+                    <option value="litro" ${producto.unidad === 'litro' ? 'selected' : ''}>Litro</option>
+                    <option value="ml" ${producto.unidad === 'ml' ? 'selected' : ''}>Mililitro</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="productPrice">Precio:</label>
+                  <input type="number" id="productPrice" value="${producto.precio}" min="0" step="0.01" required>
+                </div>
+                <div class="form-actions">
+                  <button type="submit">Guardar Cambios</button>
+                  <button type="button" id="cancelProductBtn">Cancelar</button>
+                </div>
+              </form>
+            </div>
+          `;
+
+          document.body.appendChild(modalProducto);
+          
+          const formularioProducto = document.getElementById('productForm');
+          const botonCancelar = document.getElementById('cancelProductBtn');
 
           const handleSubmit = async (e) => {
             e.preventDefault();
@@ -245,7 +329,7 @@ function configurarManejadoresProductos(callbacks) {
             try {
               const resultado = await ControladorProducto.actualizarProducto(productId, datosProducto);
               if (resultado.exito) {
-                modalProducto.style.display = 'none';
+                modalProducto.remove();
                 formularioProducto.removeEventListener('submit', handleSubmit);
                 if (callbacks.onStatusUpdate) {
                   await callbacks.onStatusUpdate();
@@ -262,8 +346,8 @@ function configurarManejadoresProductos(callbacks) {
 
           formularioProducto.addEventListener('submit', handleSubmit);
 
-          document.getElementById('cancelProductBtn').addEventListener('click', () => {
-            modalProducto.style.display = 'none';
+          botonCancelar.addEventListener('click', () => {
+            modalProducto.remove();
             formularioProducto.removeEventListener('submit', handleSubmit);
           });
         }

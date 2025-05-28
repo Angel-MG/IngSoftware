@@ -19,7 +19,6 @@ import { configurarManejadoresAdmin } from "./handlers/adminHandlers.js";
 import { ControladorPedido } from "./controladores/pedidoControlador.js";
 import { ControladorProducto } from "./controladores/productoControlador.js";
 import { ControladorUsuario } from "./controladores/usuarioControlador.js";
-import { ControladorAutenticacion } from "./controladores/autenticacionControlador.js";
 
 // Firebase
 import { db } from "./config/firebase.js";
@@ -73,26 +72,14 @@ async function inicializarApp() {
           vistaActual = nuevaVista;
           renderizarVistaActual();
         },
-        onLogout: async () => {
-          try {
-            const resultado = await ControladorAutenticacion.cerrarSesion(
-              usuarioActual.id,
-            );
-            if (resultado.exito) {
-              if (unsubscribePedidos) {
-                unsubscribePedidos();
-                unsubscribePedidos = null;
-              }
-              usuarioActual = null;
-              vistaActual = "login";
-              inicializarApp();
-            } else {
-              alert("Error al cerrar sesión: " + resultado.mensaje);
-            }
-          } catch (error) {
-            console.error("Error al cerrar sesión:", error);
-            alert("Error al cerrar sesión");
+        onLogout: () => {
+          if (unsubscribePedidos) {
+            unsubscribePedidos();
+            unsubscribePedidos = null;
           }
+          usuarioActual = null;
+          vistaActual = "login";
+          inicializarApp();
         },
       });
     }
@@ -136,7 +123,8 @@ async function renderizarVistaActual() {
 
       case "ventas":
         const pedidos = await ControladorPedido.obtenerTodosPedidos();
-        app.innerHTML = renderizarVistaVentas(pedidos.datos);
+        const productos = await ControladorProducto.obtenerTodosProductos();
+        app.innerHTML = renderizarVistaVentas(pedidos.datos, productos.datos);
         configurarManejadoresVentas(callbacks);
         inicializarVistaVentas(pedidos.datos, callbacks);
         break;
@@ -183,4 +171,3 @@ async function renderizarVistaActual() {
 
 // Iniciar la aplicación
 inicializarApp();
-
